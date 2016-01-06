@@ -36,7 +36,7 @@ class HttpClient
 
   @@user_agent = 'Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.101 Safari/537.36'
 
-  @@referer = 'https://jnb.icbc.com.cn/outer/order?area=%E5%8C%97%E4%BA%AC%E5%88%86%E8%A1%8C'
+  @@referer = 'https://jnb.icbc.com.cn/outer/order'
 
   @@post_content_type = 'application/x-www-form-urlencoded; charset=UTF-8'
 
