@@ -3,7 +3,7 @@ require 'json'
 require 'uri'
 require 'openssl'
 
-DEBUG = true
+DEBUG = false
 
 class Cookie
 
@@ -93,23 +93,31 @@ class HttpClient
   end
 end
 
-client = HttpClient.new
 
-area_name = '北京分行'
+def get_in_stock_bank_list
+  min_stock_num = 0;
 
-session_uri = URI('https://jnb.icbc.com.cn/outer/order')
-session_uri.query = URI.encode_www_form(area: area_name)
-client.get(session_uri)
+  client = HttpClient.new
 
-sec_bank_uri = URI('https://jnb.icbc.com.cn/app/coin/materials/serlvets/getAeroSecBankServlet')
-sec_bank_list = client.post(sec_bank_uri, staBankname: area_name)
+  area_name = '北京分行'
 
-in_stock_bank_list = []
+  session_uri = URI('https://jnb.icbc.com.cn/outer/order')
+  session_uri.query = URI.encode_www_form(area: area_name)
+  client.get(session_uri)
 
-JSON.parse(sec_bank_list).each do |sec_bank|
-  bank_info_uri = URI('https://jnb.icbc.com.cn/app/coin/materials/serlvets/getAeroBrInfoServlet')
-  bank_info_list = client.post(bank_info_uri, staBankname: area_name, secBankname: sec_bank['supbrno2'], brName: '')
-  in_stock_bank_list += JSON.parse(bank_info_list).select { |bank_info| bank_info['curtype'] == 4 && bank_info['booknum'] >= 5 }
+  sec_bank_uri = URI('https://jnb.icbc.com.cn/app/coin/materials/serlvets/getAeroSecBankServlet')
+  sec_bank_list = client.post(sec_bank_uri, staBankname: area_name)
+
+  in_stock_bank_list = []
+
+  JSON.parse(sec_bank_list).each do |sec_bank|
+    bank_info_uri = URI('https://jnb.icbc.com.cn/app/coin/materials/serlvets/getAeroBrInfoServlet')
+    bank_info_list = client.post(bank_info_uri, staBankname: area_name, secBankname: sec_bank['supbrno2'], brName: '')
+    in_stock_bank_list += JSON.parse(bank_info_list).select { |bank_info| bank_info['curtype'].to_i == 5 && bank_info['booknum'].to_i >= min_stock_num }
+  end
+
+  in_stock_bank_list
 end
 
-puts in_stock_bank_list
+
+puts get_in_stock_bank_list
