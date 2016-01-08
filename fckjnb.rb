@@ -26,6 +26,10 @@ class Cookie
     @cookies[key] || ''
   end
 
+  def []=(key, value)
+    @cookies[key] = value || ''
+  end
+
   def to_s
     @cookies.map{ |k, v| "#{k}=#{v}" }.join('; ')
   end
@@ -62,7 +66,7 @@ class HttpClient
       )
       res = http.request(req)
       @cookie.put(res.get_fields('set-cookie'))
-      puts "code: #{res.code}, body: #{res.body}" if DEBUG
+      puts "response code: #{res.code}, body: #{res.body}, cookie: #{@cookie.to_s}" if DEBUG
       res.body
     end
   end
@@ -83,7 +87,7 @@ class HttpClient
       )
       res = http.request(req)
       @cookie.put(res.get_fields('set-cookie'))
-      puts "response code: #{res.code}, body: #{res.body}" if DEBUG
+      puts "response code: #{res.code}, body: #{res.body}, cookie: #{@cookie.to_s}" if DEBUG
       res.body
     end
   end
@@ -91,33 +95,97 @@ class HttpClient
   def get_cookie(key)
     @cookie[key]
   end
+
+  def add_cookie(key, value)
+    @cookie[key] = value
+  end
 end
 
+AREA_NAME = '北京分行'
+
+MIN_STOCK_NUM = 0;
 
 def get_in_stock_bank_list
-  min_stock_num = 0;
 
   client = HttpClient.new
 
-  area_name = '北京分行'
-
   session_uri = URI('https://jnb.icbc.com.cn/outer/order')
-  session_uri.query = URI.encode_www_form(area: area_name)
+  session_uri.query = URI.encode_www_form(area: AREA_NAME)
   client.get(session_uri)
 
   sec_bank_uri = URI('https://jnb.icbc.com.cn/app/coin/materials/serlvets/getAeroSecBankServlet')
-  sec_bank_list = client.post(sec_bank_uri, staBankname: area_name)
+  sec_bank_list = client.post(sec_bank_uri, staBankname: AREA_NAME)
 
   in_stock_bank_list = []
 
   JSON.parse(sec_bank_list).each do |sec_bank|
     bank_info_uri = URI('https://jnb.icbc.com.cn/app/coin/materials/serlvets/getAeroBrInfoServlet')
-    bank_info_list = client.post(bank_info_uri, staBankname: area_name, secBankname: sec_bank['supbrno2'], brName: '')
-    in_stock_bank_list += JSON.parse(bank_info_list).select { |bank_info| bank_info['curtype'].to_i == 5 && bank_info['booknum'].to_i >= min_stock_num }
+    bank_info_list = client.post(bank_info_uri, staBankname: AREA_NAME, secBankname: sec_bank['supbrno2'], brName: '')
+    in_stock_bank_list += JSON.parse(bank_info_list).select { |bank_info| bank_info['curtype'].to_i == 5 && bank_info['booknum'].to_i >= MIN_STOCK_NUM }
   end
 
   in_stock_bank_list
 end
 
 
-puts get_in_stock_bank_list
+def get_verify_code_image
+  client = HttpClient.new
+
+  session_uri = URI('https://jnb.icbc.com.cn/outer/order')
+  session_uri.query = URI.encode_www_form(area: AREA_NAME)
+  client.get(session_uri)
+
+  verify_code_image_uri = URI('https://jnb.icbc.com.cn/coin/servlet/ICBCVerifyImage')
+  verify_code_image_uri.query = URI.encode_www_form(i: Time.now.to_i)
+  image = client.get(verify_code_image_uri)
+  return image, client.get_cookie('JSESSIONID')
+end
+
+def fck_the_jnb(user_info, bank_brzo, session, verify_code)
+  client = HttpClient.new
+  client.add_cookie('JSESSIONID', 'session')
+  fck_jnb_uri = URI('https://jnb.icbc.com.cn/app/coin/materials/serlvets/bookAeroAppServlet')
+  post_data = JSON.generate(
+    starBankName: '',
+    paperType: 0,
+    paperNum: user_info.id,
+    name: user_info.name,
+    phone: user_info.phone,
+    verify: verify_code,
+    mobileverify: '',
+    zoneno: '',
+    BRZO: bank_brzo,
+    orderno: '',
+    siteaddr: '',
+    curtypenums: '第一批贺岁币@4-5',
+    bradrr: '',
+    querytype: 0,
+    curtypenumdel: ''
+  )
+  client.post(uri, msg: post_data)
+end
+
+class UserInfo < Struct.new(:name, :id, :phone); end
+
+user_info = UserInfo.new
+
+puts '请输入姓名'
+user_info.name = gets.chomp
+
+puts '请输入身份证号'
+user_info.id = gets.chomp
+
+puts '请输入手机号'
+user_info.phone = gets.chomp
+
+get_in_stock_bank_list.each do |bank|
+  image, session = get_verify_code_image
+
+  File.open('verify_code.jpg', 'wb') { |file| file.write(image) }
+
+  puts '请输入验证码'
+
+  verify_code = gets.chomp
+
+  fck_the_jnb(user_info, bank['brzo'], session, verify_code)
+end
