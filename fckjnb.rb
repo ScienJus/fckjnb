@@ -103,7 +103,7 @@ end
 
 AREA_NAME = '北京分行'
 
-MIN_STOCK_NUM = 0;
+MIN_STOCK_NUM = 5;
 
 def get_in_stock_bank_list
 
@@ -121,7 +121,7 @@ def get_in_stock_bank_list
   JSON.parse(sec_bank_list).each do |sec_bank|
     bank_info_uri = URI('https://jnb.icbc.com.cn/app/coin/materials/serlvets/getAeroBrInfoServlet')
     bank_info_list = client.post(bank_info_uri, staBankname: AREA_NAME, secBankname: sec_bank['supbrno2'], brName: '')
-    in_stock_bank_list += JSON.parse(bank_info_list).select { |bank_info| bank_info['curtype'].to_i == 5 && bank_info['booknum'].to_i >= MIN_STOCK_NUM }
+    in_stock_bank_list += JSON.parse(bank_info_list).select { |bank_info| bank_info['curtype'].to_i == 4 && bank_info['booknum'].to_i >= MIN_STOCK_NUM }
   end
 
   in_stock_bank_list
@@ -147,7 +147,10 @@ def fck_the_jnb(user_info, bank_brzo, session, verify_code)
   fck_jnb_uri = URI('https://jnb.icbc.com.cn/app/coin/materials/serlvets/bookAeroAppServlet')
   post_data = JSON.generate(
     starBankName: '',
-    paperType: 0,
+# Error 500: org.springframework.web.util.NestedServletException:
+# Request processing failed&#59; nested exception is org.json.JSONException:
+# JSONObject[&quot;paperType&quot;] not a string.
+    paperType: '0',
     paperNum: user_info.id,
     name: user_info.name,
     phone: user_info.phone,
@@ -162,7 +165,7 @@ def fck_the_jnb(user_info, bank_brzo, session, verify_code)
     querytype: 0,
     curtypenumdel: ''
   )
-  client.post(uri, msg: post_data)
+  client.post(fck_jnb_uri, msg: post_data)
 end
 
 class UserInfo < Struct.new(:name, :id, :phone); end
@@ -179,6 +182,8 @@ puts '请输入手机号'
 user_info.phone = gets.chomp
 
 get_in_stock_bank_list.each do |bank|
+  puts bank.to_s
+
   image, session = get_verify_code_image
 
   File.open('verify_code.jpg', 'wb') { |file| file.write(image) }
@@ -187,5 +192,5 @@ get_in_stock_bank_list.each do |bank|
 
   verify_code = gets.chomp
 
-  fck_the_jnb(user_info, bank['brzo'], session, verify_code)
+  puts fck_the_jnb(user_info, bank['brzo'], session, verify_code)
 end
