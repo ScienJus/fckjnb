@@ -149,16 +149,16 @@ module FckJNB
       image
     end
 
-    def get_sms_verify_code(verify_code)
-      client = FckJNB::Http.new
-      client.add_cookie('JSESSIONID', @session)
-      sms_verify_code_uri = URI('https://jnb.icbc.com.cn/app/coin/materials/serlvets/sendMobileCode')
-      result = client.post(sms_verify_code_uri, mobile: @user_info.phone, verify: verify_code, temtype: 1)
-      result = JSON.parse(result)[0]
-      if result['errtype'] == '0'
-        result['codeNumber']
-      end
-    end
+    # def get_sms_verify_code(verify_code)
+    #   client = FckJNB::Http.new
+    #   client.add_cookie('JSESSIONID', @session)
+    #   sms_verify_code_uri = URI('https://jnb.icbc.com.cn/app/coin/materials/serlvets/sendMobileCode')
+    #   result = client.post(sms_verify_code_uri, mobile: @user_info.phone, verify: verify_code, temtype: 1)
+    #   result = JSON.parse(result)[0]
+    #   if result['errtype'] == '0'
+    #     result['codeNumber']
+    #   end
+    # end
 
     def fck_the_jnb(bank_info, verify_code, sms_verify_code)
       client = FckJNB::Http.new
@@ -248,13 +248,4 @@ puts "验证码图片已保存在 #{File.absolute_path('verify_code.jpg')}，请
 
 verify_code = gets.chomp
 
-code = client.get_sms_verify_code(verify_code)
-
-if code
-  puts "手机验证码已经发送，编号是#{code}，请输入验证码："
-
-  sms_verify_code = gets.chomp
-  puts client.fck_the_jnb(bank_list[index], verify_code, sms_verify_code)
-else
-  puts '验证码错误'
-end
+puts client.fck_the_jnb(bank_info, verify_code, '')
