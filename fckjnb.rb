@@ -240,6 +240,8 @@ puts '请输入你想预约银行的编号：'
 
 index = gets.chomp.to_i
 
+bank_info = bank_list[i]
+
 image = client.get_verify_code_image
 
 File.open('verify_code.jpg', 'wb') { |file| file.write(image) }
