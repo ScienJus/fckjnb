@@ -121,14 +121,14 @@ module FckJNB
 
       sec_bank_uri = URI('https://jnb.icbc.com.cn/app/coin/materials/serlvets/getAeroSecBankServlet')
       sec_bank_list = client.post(sec_bank_uri, staBankname: @area_name)
-      sec_bank_list = JSON.parse(sec_bank_list).select { |sec_bank| sec_bank['curtype'].to_i == 4 && sec_bank['booknum'].to_i >= @reserved_number }
+      sec_bank_list = JSON.parse(sec_bank_list).select { |sec_bank| sec_bank['curtype'].to_i == 5 && sec_bank['booknum'].to_i >= @reserved_number }
 
       in_stock_bank_list = []
 
       sec_bank_list.each do |sec_bank|
         bank_info_uri = URI('https://jnb.icbc.com.cn/app/coin/materials/serlvets/getAeroBrInfoServlet')
         bank_info_list = client.post(bank_info_uri, staBankname: @area_name, secBankname: sec_bank['supbrno2'], brName: '')
-        in_stock_bank_list += JSON.parse(bank_info_list).select { |bank_info| bank_info['curtype'].to_i == 4 && bank_info['booknum'].to_i >= @reserved_number }
+        in_stock_bank_list += JSON.parse(bank_info_list).select { |bank_info| bank_info['curtype'].to_i == 5 && bank_info['booknum'].to_i >= @reserved_number }
       end
 
       in_stock_bank_list.map { |bank_info| FckJNB::BankInfo.new(bank_info['brname'], bank_info['braddr'], bank_info['brzo'], bank_info['booknum'].to_i) }
@@ -179,7 +179,7 @@ module FckJNB
         BRZO: bank_info.brzo,
         orderno: '',
         siteaddr: '',
-        curtypenums: "第一批贺岁币@4-#{@reserved_number}",
+        curtypenums: "第二批贺岁币@5-#{@reserved_number}",
         bradrr: '',
         querytype: 0,
         curtypenumdel: ''
